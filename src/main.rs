@@ -82,13 +82,37 @@ async fn main() {
             if let Ok(Some(song_in_queue)) = current_song {
                 let song = song_in_queue.song;
 
-                let details =
+                let mut details =
                     replace_tokens(details_format, &details_tokens, &song, &mut mpd).await;
-                let state = replace_tokens(state_format, &state_tokens, &song, &mut mpd).await;
+                let mut state = replace_tokens(state_format, &state_tokens, &song, &mut mpd).await;
                 let large_text =
                     replace_tokens(large_text_format, &large_text_tokens, &song, &mut mpd).await;
                 let small_text =
                     replace_tokens(small_text_format, &small_text_tokens, &song, &mut mpd).await;
+
+                // Make sure we don't have an empty date
+                let large_text = if large_text.starts_with("() ") {
+                    large_text.get(3..).unwrap_or("").to_string()
+                } else {
+                    large_text
+                };
+
+                // Radios don't tag things correctly...
+                // This code has a bug where titles with the ` - ` string
+                // don't get joined together. Chances of this happening are low
+                // but they are there.
+                if large_text.is_empty() && state.is_empty()
+                        && details.contains('-') {
+                    let mut spl = details.split(" - ").into_iter();
+                    state = spl.next().unwrap_or("").to_string();
+                    details = spl.collect::<String>();
+                }
+
+                // Skip ID/PSA's on radio stations
+                if state.contains("ID/PSA") && details.contains("ID/PSA") {
+                    thread::sleep(time::Duration::from_secs(5));
+                    continue;
+                }
 
                 let timestamps = get_timestamp(&mut mpd, timestamp_mode).await;
 
