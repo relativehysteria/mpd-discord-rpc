@@ -101,11 +101,17 @@ async fn main() {
                 // This code has a bug where titles with the ` - ` string
                 // don't get joined together. Chances of this happening are low
                 // but they are there.
+                //
+                // Also, if we are listening to the radio, turn off the
+                // timestamp.
+                let mut timestamp_mode = timestamp_mode;
                 if large_text.is_empty() && state.is_empty()
                         && details.contains('-') {
                     let mut spl = details.split(" - ").into_iter();
                     state = spl.next().unwrap_or("").to_string();
                     details = spl.collect::<String>();
+
+                    timestamp_mode = "off";
                 }
 
                 // Skip ID/PSA's on radio stations
